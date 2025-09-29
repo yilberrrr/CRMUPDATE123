@@ -8,6 +8,7 @@ import ProjectList from './components/DealList';
 import DemoList from './components/TaskList';
 import DealsList from './components/DealsList';
 import Treasury from './components/Treasury';
+import AuthTest from './components/Auth/AuthTest';
 import SettingsModal from './components/Settings';
 import { useUserRole } from './hooks/useUserRole';
 
@@ -94,6 +95,9 @@ const AppContent: React.FC = () => {
       {showSettings && (
         <SettingsModal onClose={() => setShowSettings(false)} />
       )}
+      
+      {/* Development Auth Test */}
+      <AuthTest />
     </div>
   );
 };

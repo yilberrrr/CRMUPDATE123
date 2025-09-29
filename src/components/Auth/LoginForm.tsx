@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { debugSupabaseConfig, testAuth } from '../../lib/supabase-debug';
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -8,6 +9,7 @@ const LoginForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   const { signIn } = useAuth();
 
@@ -16,14 +18,36 @@ const LoginForm: React.FC = () => {
     setLoading(true);
     setError('');
 
+    // Debug Supabase configuration
+    const config = debugSupabaseConfig();
+    setDebugInfo(config);
+    
+    if (!config.clientReady) {
+      setError('Supabase client not properly configured. Check environment variables.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const { error } = await signIn(email, password);
 
       if (error) {
-        setError(error.message);
+        console.error('🚨 Login Error Details:', error);
+        
+        // Provide more specific error messages
+        if (error.message.includes('Invalid login credentials')) {
+          setError('Invalid email or password. Please check your credentials and try again.');
+        } else if (error.message.includes('Email not confirmed')) {
+          setError('Please check your email and click the confirmation link before signing in.');
+        } else if (error.message.includes('Too many requests')) {
+          setError('Too many login attempts. Please wait a few minutes and try again.');
+        } else {
+          setError(`Login failed: ${error.message}`);
+        }
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      console.error('🚨 Unexpected Login Error:', err);
+      setError(`Unexpected error: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -47,7 +71,20 @@ const LoginForm: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="bg-red-900 bg-opacity-30 border border-red-500 text-red-300 px-4 py-3 rounded-lg text-sm tech-border">
+              <div className="font-medium mb-2">Authentication Error:</div>
               {error}
+              
+              {/* Debug information in development */}
+              {import.meta.env.DEV && debugInfo && (
+                <details className="mt-3 text-xs">
+                  <summary className="cursor-pointer text-red-400">Debug Info (Dev Only)</summary>
+                  <div className="mt-2 p-2 bg-red-950 rounded">
+                    <div>URL Present: {debugInfo.hasUrl ? '✅' : '❌'}</div>
+                    <div>Key Present: {debugInfo.hasKey ? '✅' : '❌'}</div>
+                    <div>Client Ready: {debugInfo.clientReady ? '✅' : '❌'}</div>
+                  </div>
+                </details>
+              )}
             </div>
           )}
 
@@ -110,6 +147,16 @@ const LoginForm: React.FC = () => {
             )}
           </button>
         </form>
+        
+        {/* Development helper */}
+        {import.meta.env.DEV && (
+          <div className="mt-4 p-3 bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg text-xs text-blue-300">
+            <div className="font-medium mb-1">Development Tips:</div>
+            <div>• Check Supabase Auth settings for email confirmation</div>
+            <div>• Verify user exists in Authentication > Users</div>
+            <div>• Check browser console for detailed error logs</div>
+          </div>
+        )}
       </div>
     </div>
   );
